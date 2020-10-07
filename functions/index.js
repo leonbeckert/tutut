@@ -59,10 +59,14 @@ exports.createNotificationOnLike = functions
     .region("europe-west3")
     .firestore.document("likes/{id}")
     .onCreate((snapshot) => {
-        db.doc(`/tuts/${snapshot.data().tutId}`)
+        return db
+            .doc(`/tuts/${snapshot.data().tutId}`)
             .get()
             .then((doc) => {
-                if (doc.exists) {
+                if (
+                    doc.exists &&
+                    doc.data().userHandle !== snapshot.data().userHandle
+                ) {
                     return db.doc(`/notifications/${snapshot.id}`).set({
                         createdAt: new Date().toISOString(),
                         recipient: doc.data().userHandle,
@@ -73,37 +77,31 @@ exports.createNotificationOnLike = functions
                     });
                 }
             })
-            .then(() => {
-                return;
-            })
-            .catch((err) => {
-                console.error(err);
-                return;
-            });
+            .catch((err) => console.error(err));
     });
 
 exports.deleteNotificationOnUnlike = functions
     .region("europe-west3")
     .firestore.document("likes/{id}")
     .onDelete((snapshot) => {
-        db.doc(`/notifications/${snapshot.id}`)
+        return db
+            .doc(`/notifications/${snapshot.id}`)
             .delete()
-            .then(() => {
-                return;
-            })
-            .catch((err) => {
-                console.error(err);
-            });
+            .catch((err) => console.error(err));
     });
 
 exports.createNotificationOnComment = functions
     .region("europe-west3")
     .firestore.document("comments/{id}")
     .onCreate((snapshot) => {
-        db.doc(`/tuts/${snapshot.data().tutId}`)
+        return db
+            .doc(`/tuts/${snapshot.data().tutId}`)
             .get()
             .then((doc) => {
-                if (doc.exists) {
+                if (
+                    doc.exists &&
+                    doc.data().userHandle !== snapshot.data().userHandle
+                ) {
                     return db.doc(`/notifications/${snapshot.id}`).set({
                         createdAt: new Date().toISOString(),
                         recipient: doc.data().userHandle,
@@ -114,11 +112,64 @@ exports.createNotificationOnComment = functions
                     });
                 }
             })
-            .then(() => {
-                return;
+            .catch((err) => console.error(err));
+    });
+
+exports.onUserImageChange = functions
+    .region("europe-west3")
+    .firestore.document("/users/{userId}")
+    .onUpdate((change) => {
+        console.log(change.before.data());
+        console.log(change.after.data());
+        if (change.before.data().imageUrl !== change.after.data().imageUrl) {
+            console.log("Image has changed");
+            const batch = db.batch();
+            return db
+                .collection("tuts")
+                .where("userHandle", "==", change.before.data().handle)
+                .get()
+                .then((data) => {
+                    data.forEach((doc) => {
+                        const scream = db.doc(`/tuts/${doc.id}`);
+                        batch.update(scream, {
+                            userImage: change.after.data().imageUrl,
+                        });
+                    });
+                    return batch.commit();
+                });
+        } else return true;
+    });
+
+exports.onTutDelete = functions
+    .region("europe-west3")
+    .firestore.document("/tuts/{tutId}")
+    .onDelete((snapshot, context) => {
+        const tutId = context.params.tutId;
+        const batch = db.batch();
+        return db
+            .collection("comments")
+            .where("tutId", "==", tutId)
+            .get()
+            .then((data) => {
+                data.forEach((doc) => {
+                    batch.delete(db.doc(`/comments/${doc.id}`));
+                });
+                return db.collection("likes").where("tutId", "==", tutId).get();
             })
-            .catch((err) => {
-                console.error(err);
-                return;
-            });
+            .then((data) => {
+                data.forEach((doc) => {
+                    batch.delete(db.doc(`/likes/${doc.id}`));
+                });
+                return db
+                    .collection("notifications")
+                    .where("tutId", "==", tutId)
+                    .get();
+            })
+            .then((data) => {
+                data.forEach((doc) => {
+                    batch.delete(db.doc(`/notifications/${doc.id}`));
+                });
+                return batch.commit();
+            })
+            .catch((err) => console.error(err));
     });
