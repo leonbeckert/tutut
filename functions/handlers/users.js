@@ -206,12 +206,12 @@ exports.getAuthenticatedUser = (req, res) => {
 
 // Upload a profile image for user
 exports.uploadImage = (req, res) => {
-    const BusBoy = require("busboy");
+    const Busboy = require("busboy");
     const path = require("path");
     const os = require("os");
     const fs = require("fs");
 
-    const busboy = new BusBoy({ headers: req.headers });
+    const busboy = new Busboy({ headers: req.headers });
 
     let imageFileName;
     let imageToBeUploaded = {};
