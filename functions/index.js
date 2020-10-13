@@ -18,7 +18,7 @@ const {
     getAllTuts,
     postOneTut,
     getTut,
-    commentOnScream,
+    commentOnTut,
     likeTut,
     unlikeTut,
     deleteTut,
@@ -41,7 +41,7 @@ app.get("/tut/:tutId", getTut);
 app.delete("/tut/:tutId", FBAuth, deleteTut);
 app.get("/tut/:tutId/like", FBAuth, likeTut);
 app.get("/tut/:tutId/unlike", FBAuth, unlikeTut);
-app.post("/tut/:tutId/comment", FBAuth, commentOnScream);
+app.post("/tut/:tutId/comment", FBAuth, commentOnTut);
 
 // Users routes
 
@@ -130,8 +130,8 @@ exports.onUserImageChange = functions
                 .get()
                 .then((data) => {
                     data.forEach((doc) => {
-                        const scream = db.doc(`/tuts/${doc.id}`);
-                        batch.update(scream, {
+                        const tut = db.doc(`/tuts/${doc.id}`);
+                        batch.update(tut, {
                             userImage: change.after.data().imageUrl,
                         });
                     });

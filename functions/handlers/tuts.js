@@ -86,10 +86,10 @@ exports.getTut = (req, res) => {
 };
 
 // Comment on a comment
-exports.commentOnScream = (req, res) => {
-    if (req.body.body.trim() === "")
-        res.status(400).json({ comment: "Must not be empty" });
-
+exports.commentOnTut = (req, res) => {
+    if (req.body.body.trim() === "") {
+        return res.status(400).json({ comment: "Must not be empty" });
+    }
     const newComment = {
         body: req.body.body,
         createdAt: new Date().toISOString(),
@@ -120,7 +120,7 @@ exports.commentOnScream = (req, res) => {
         });
 };
 
-// Like a scream
+// Like a tut
 exports.likeTut = (req, res) => {
     const likeDocument = db
         .collection("likes")
